@@ -1,0 +1,386 @@
+
+@cpp(src="ext-cpp/utilities.cpp,ext-cpp/trace_helper.cpp,ext-cpp/proba_helper.cpp",include="utilities.hpp,trace_helper.hpp,proba_helper.hpp")
+
+package TrainTransportation
+
+
+    const data int FAULTY = 0
+    const data int NOFAULTY = 1
+
+
+    
+    extern function float nextSeg(float function_param_0)
+    
+    extern function float currentSegGrade(float function_param_0)
+    
+    extern function float currentSegSpeed(float function_param_0)
+    
+    extern function float nextStop(float function_param_0)
+    
+    extern function float wcsd()
+
+    extern function float appendText( float  function_param_0, float function_param_1, float function_param_2, float  function_param_3)
+
+
+    extern function printf(string function_param_0, int function_param_1, int function_param_2)
+
+    extern function printf(string function_param_0, int  function_param_1, float function_param_2)
+
+    extern function printf(string function_param_0, float  function_param_1)
+
+    extern function printf(string function_param_0, int  function_param_1)
+
+    extern function printf(string function_param_0)
+
+
+    
+    port type Port_Type_ACC_SPEED (float acc, float speed, int fault, int ID)
+    
+    port type Port_Silent ()
+    
+    port type Port_Type_Position_Acc_Speed (float acc, float speed, float position, int fault,  int ID)
+
+    
+    connector type connector_type_Speed_And_Acc (Port_Type_ACC_SPEED p1, Port_Type_ACC_SPEED p2)
+        data float varACC
+        data float varSpeed
+        define p2' p1' 
+        on p2  down {   p2.fault = FAULTY;   }
+
+        on p2 p1 provided (p1.ID==p2.ID) down {  
+		 p1.acc=p2.acc; p1.speed=p2.speed;  p2.fault = NOFAULTY;  p1.fault = NOFAULTY;   
+		 printf("DATA TRANSFERT FROM  %d  to %d\n",  p2.ID, p1.ID );
+	 }
+
+        on p1 down {   p1.fault = FAULTY;   }
+    end
+
+    
+    connector type connector_type_Speed_And_Acc_Position (Port_Type_Position_Acc_Speed p1, Port_Type_Position_Acc_Speed p2)
+        data float varAcc
+        data float varSpeed
+        data float varPosition
+       define p1' p2
+        on p1   down {   p1.fault = FAULTY;   }
+
+        on p1 p2 down {     p2.acc=p1.acc; p2.speed=p1.speed;  p2.position=p1.position ; p2.fault = NOFAULTY;  p1.fault = NOFAULTY;  p2.ID=p1.ID; }
+    end
+
+    
+    atom type Train (int vid, float currentPosition)
+        
+        
+        data float vcm
+        
+        data float acm
+        
+        data float v
+        
+        data float a
+        
+        data float position
+        
+        data int fault
+        
+        data float nose
+        
+        data float delta
+
+        data float elapsedtime
+        
+        data float gradeacc
+        
+        data float speed
+        
+        data float grade
+        
+        data float noseAtNext
+        
+        data int ID
+        
+        
+        export port Port_Type_ACC_SPEED receiveVCMandACM(acm, vcm, fault, ID)
+        
+        export port Port_Type_Position_Acc_Speed sendPositionAccVelocity(a, v, position, fault, ID)
+        
+        
+        port Port_Silent computePosition()
+        
+        port Port_Silent computeVelocity()
+        
+        port Port_Silent faultyReception()
+        
+        port Port_Silent computeAcceleration()
+        
+        
+        place START, Place2, Place3, Place4, Place5
+        initial to START
+            do {
+                delta = 0.5;
+                nose = 5;
+	    elapsedtime = 0;
+	    ID=vid;
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+            }
+            
+            on receiveVCMandACM
+                from START
+                to Place2 do{
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+		}
+            
+            on computePosition
+                from Place2
+                to Place3
+                provided (! (fault  ==  FAULTY))
+                do {
+		printf("TRAIN NO FAULTY RECEPTION = %f \n", fault);
+                        gradeacc = ((- 21.9  *  currentSegGrade(position))  /  100);
+                        if (((v  ==  0)  ||  (vcm  ==  0))) then
+                            position = position;
+                        
+                        else
+                            position = (((position  +  (v  *  delta))  +  (((0.5  *  a)  *  delta)  *  delta))  +  (((0.5  *  gradeacc)  *  delta)  *  delta));
+		    
+                        fi
+		
+   		printf("TRAIN POSITION = %f \n", position);
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+                }
+            
+            on computeVelocity
+                from Place3
+                to Place4
+                do {
+                        speed = ((v  +  (a  *  delta))  +  (gradeacc  *  delta));
+                        if (   ((v  ==  0)  && (vcm  ==  0))  ||  (speed  <=  0))  then
+                            v = 0;
+                        
+                        else
+                            v = speed;
+                        fi
+		printf("TRAIN SPEED = %f \n", v);
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+                }
+            
+            
+            on faultyReception
+                from Place2
+                to Place5
+                provided ((fault  == FAULTY))
+	    do{
+		printf("TRAIN FAULTY RECEPTION = %f \n", fault);
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+		}
+            
+            on computeAcceleration
+                from Place4
+                to Place5
+                do {
+                        noseAtNext = (((position  +  (v  *  delta))  +  (((0.5  *  a)  *  delta)  *  delta))  +  (((0.5  *  gradeacc)  *  delta)  *  delta));
+                        grade = nextSeg(noseAtNext);
+
+                        if  (v==0 && vcm==0 ) then
+                            a = 0;
+                        
+                        else
+                                                    if   (  ( (v>vcm-2) && acm >0 ) ||  ( (v<vcm-2) && acm <0 ) ) then
+                            			a = (21.9*grade)/100;
+                        
+                        			else
+                            			a = acm;
+                       			    fi
+                        fi
+		printf("TRAIN ACCELERATION = %f \n", a);
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+		appendText(elapsedtime, position, a,v);
+                }
+            
+            on sendPositionAccVelocity
+                from Place5
+                to START do {
+		elapsedtime =elapsedtime +delta;
+		printf("var int T%d.t %f\n", ID, elapsedtime);
+		printf("var int T%d.p %f\n", ID, position);
+		printf("var int T%d.v %f\n", ID, v);
+		printf("var int T%d.a %f\n", ID, a);
+}
+    
+    
+    end
+
+atom type AATC ()
+        data int fault
+        
+        data float v
+        
+        data float p
+        
+        data float a
+        
+        data float vcm
+        
+        data float acm
+    
+        data float stopDistance
+        
+        data float safeStopDistance
+
+        data float vcmCivilSpeed
+
+        data float acmCivilAcceleration
+
+        data float acmNextStop
+
+        data float delta
+        
+        data float gradeacc
+        
+        data float range
+
+        data float acc
+
+        data int ID
+        
+        export port Port_Type_Position_Acc_Speed receiveTrainPositionAndAccAndVelocity(a, v, p, fault, ID)
+        
+        export port Port_Type_ACC_SPEED transmitacmAndVcm(acm, vcm, fault, ID)
+        
+        port Port_Silent computeVCMCivilSpeed()
+        
+        port Port_Silent faultyReception()
+        
+        port Port_Silent computeCommandedSpeed()
+        
+        port Port_Silent computeCommandedAcceleration()
+        
+        place START, Place2, Place3, Place5, Place4
+        initial to START 
+	do{
+                printf("AATC %d data inizialization\n",  ID);
+                delta = 0.5;	
+	    ID=0;
+	}
+            
+            on receiveTrainPositionAndAccAndVelocity
+                from START
+                to Place2 do{ printf("AATC %d data reception \n",  ID);}
+            
+            on faultyReception
+                from Place2
+                to START
+                provided ((fault  ==  FAULTY))
+            
+            on computeVCMCivilSpeed
+                from Place2
+                to Place3
+                provided (! (fault  ==  FAULTY))
+                do {
+                        gradeacc = ((- 21.9  *  currentSegGrade(p))  /  100);
+		printf("AATC gradeacc = %f \n", gradeacc);
+                        range = ((wcsd()  *  2) +100);
+		printf("AATC range = %f \n", range);
+                        vcmCivilSpeed = currentSegSpeed((p  +  range));
+		printf("AATC vcmCivilSpeed = %f \n", vcmCivilSpeed);
+
+                }
+
+            on computeCommandedSpeed
+                from Place3
+                to Place4 do {
+	            stopDistance = (nextStop(p)  -  p);
+		printf("AATC stopDistance = %f \n", stopDistance);
+                        if ((stopDistance  <  range)) then
+                            vcm=0;
+              
+                        else
+              	  vcm=vcmCivilSpeed;	
+		 fi
+
+		printf("AATC vcm = %f \n", vcm);
+		}
+            
+            on computeCommandedAcceleration
+                from Place4
+                to Place5
+	do{
+	
+		if (stopDistance < 0) then acc = (a + 0.5);
+		else
+		acc = ((((vcmCivilSpeed * vcmCivilSpeed) - (v * v)) / (2 *stopDistance)) - gradeacc);
+		fi
+
+		if ((acc < 0) && (acc > -0.45)) then acmCivilAcceleration = - 0.45;
+		else acmCivilAcceleration = acc;
+		fi
+
+		safeStopDistance = (stopDistance - wcsd());
+		acc= -(v*v)/(2*safeStopDistance) - gradeacc;
+
+		if (stopDistance > range) then acmNextStop = a+0.5 ;
+		else
+			if (acc < 0 && acc > -0.45 && safeStopDistance > v*delta +1/2*gradeacc*delta*delta)
+			then acmNextStop = 0.0;
+			else
+				if (acc < 0 && acc > -0.45 && safeStopDistance <= (v*delta +1/2*gradeacc*delta*delta) )
+				then acmNextStop= -0.45 ;
+				else acmNextStop =acc;
+				fi
+			fi
+		fi
+
+		if (acmCivilAcceleration < acmNextStop) then acm = acmCivilAcceleration;
+		else acm = acmNextStop;
+		fi
+
+
+
+		if (acm < -2.0) then acm=-2.0; 
+			else
+			if (acm > 3.0) then acm=3.0; else
+				if (acm < 0 && acm > -0.45) then acm = -0.45;
+				 else
+				 if (v <= 0.5 && vcm == 0) then acm= -2.0; fi
+				fi
+			fi
+		fi
+
+		printf("AATC acm = %f \n", acm);
+	}
+
+            on transmitacmAndVcm
+                from Place5
+                to START
+		do{ printf("AATC  %f data transmission \n",  ID);}
+
+end
+
+    
+    compound type Compound ()
+    
+        component Train train (1, 0)
+        component AATC aatc ()
+    
+        connector connector_type_Speed_And_Acc Connector1 (train.receiveVCMandACM, aatc.transmitacmAndVcm)
+        connector connector_type_Speed_And_Acc_Position Connector2 (train.sendPositionAccVelocity, aatc.receiveTrainPositionAndAccAndVelocity)
+    
+    end
+end
