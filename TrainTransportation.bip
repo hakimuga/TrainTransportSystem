@@ -1,4 +1,5 @@
 
+
 @cpp(src="ext-cpp/utilities.cpp,ext-cpp/trace_helper.cpp,ext-cpp/proba_helper.cpp",include="utilities.hpp,trace_helper.hpp,proba_helper.hpp")
 
 package TrainTransportation
@@ -33,6 +34,7 @@ package TrainTransportation
     extern function printf(string function_param_0)
 
 
+    extern function int convert(float function_param_0)
     
     port type Port_Type_ACC_SPEED (float acc, float speed, int fault, int ID)
     
@@ -98,6 +100,7 @@ package TrainTransportation
         
         data int ID
         
+        data int varint   
         
         export port Port_Type_ACC_SPEED receiveVCMandACM(acm, vcm, fault, ID)
         
@@ -116,23 +119,34 @@ package TrainTransportation
         place START, Place2, Place3, Place4, Place5
         initial to START
             do {
+
+
                 delta = 0.5;
                 nose = 5;
 	    elapsedtime = 0;
 	    ID=vid;
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
             }
             
             on receiveVCMandACM
                 from START
                 to Place2 do{
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
 		}
             
             on computePosition
@@ -150,11 +164,14 @@ package TrainTransportation
 		    
                         fi
 		
-   		printf("TRAIN POSITION = %f \n", position);
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
                 }
             
             on computeVelocity
@@ -168,11 +185,14 @@ package TrainTransportation
                         else
                             v = speed;
                         fi
-		printf("TRAIN SPEED = %f \n", v);
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
                 }
             
             
@@ -182,10 +202,14 @@ package TrainTransportation
                 provided ((fault  == FAULTY))
 	    do{
 		printf("TRAIN FAULTY RECEPTION = %f \n", fault);
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
 		}
             
             on computeAcceleration
@@ -207,21 +231,30 @@ package TrainTransportation
                        			    fi
                         fi
 		printf("TRAIN ACCELERATION = %f \n", a);
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+		elapsedtime =elapsedtime +delta;
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
 		appendText(elapsedtime, position, a,v);
                 }
             
             on sendPositionAccVelocity
                 from Place5
                 to START do {
-		elapsedtime =elapsedtime +delta;
-		printf("var int T%d.t %f\n", ID, elapsedtime);
-		printf("var int T%d.p %f\n", ID, position);
-		printf("var int T%d.v %f\n", ID, v);
-		printf("var int T%d.a %f\n", ID, a);
+
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
 }
     
     
