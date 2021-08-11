@@ -1,1 +1,118 @@
+xA==0)  
+            
+            on faultyReception
+                from Place2
+                to START
+                provided ((fault  ==  FAULTY) && !(xA==0))
+            
+            on computeVCMCivilSpeed
+                from Place2
+                to Place3
+                provided (! (fault  ==  FAULTY)  && !(xA==0))
+                do {
+                        gradeacc = ((- 21.9  *  currentSegGrade(p))  /  100);
+		printf("AATC gradeacc = %f \n", gradeacc);
+                        range = ((wcsd()  *  2) +100);
+		printf("AATC range = %f \n", range);
+                        vcmCivilSpeed = currentSegSpeed((p  +  range));
+		printf("AATC vcmCivilSpeed = %f \n", vcmCivilSpeed);
+  	    xA = select(distrib, size);
+                }
 
+            on computeVCMCivilSpeedFail
+                from Place2
+                to Place6 provided(xA==0)  
+
+            on computeCommandedSpeed
+                from Place3
+                to Place4 provided(!(xA==0) ) do {
+	            stopDistance = (nextStop(p)  -  p);
+		printf("AATC stopDistance = %f \n", stopDistance);
+                        if ((stopDistance  <  range)) then
+                            vcm=0;
+              
+                        else
+              	  vcm=vcmCivilSpeed;	
+		 fi
+  	    xA = select(distrib, size);
+		printf("AATC vcm = %f \n", vcm);
+		}
+            on computeCommandedSpeedFail
+                from Place3
+                to Place6 provided(xA==0)  
+
+
+            on computeCommandedAccelerationFail
+                from Place4
+                to Place6 provided(xA==0)  
+            
+            on computeCommandedAcceleration
+                from Place4
+                to Place5 provided( !(xA==0) )  
+	do{
+	
+		if (stopDistance < 0) then acc = (a + 0.5);
+		else
+		acc = ((((vcmCivilSpeed * vcmCivilSpeed) - (v * v)) / (2 *stopDistance)) - gradeacc);
+		fi
+
+		if ((acc < 0) && (acc > -0.45)) then acmCivilAcceleration = - 0.45;
+		else acmCivilAcceleration = acc;
+		fi
+
+		safeStopDistance = (stopDistance - wcsd());
+		acc= -(v*v)/(2*safeStopDistance) - gradeacc;
+
+		if (stopDistance > range) then acmNextStop = a+0.5 ;
+		else
+			if (acc < 0 && acc > -0.45 && safeStopDistance > v*delta +1/2*gradeacc*delta*delta)
+			then acmNextStop = 0.0;
+			else
+				if (acc < 0 && acc > -0.45 && safeStopDistance <= (v*delta +1/2*gradeacc*delta*delta) )
+				then acmNextStop= -0.45 ;
+				else acmNextStop =acc;
+				fi
+			fi
+		fi
+
+		if (acmCivilAcceleration < acmNextStop) then acm = acmCivilAcceleration;
+		else acm = acmNextStop;
+		fi
+
+
+
+		if (acm < -2.0) then acm=-2.0; 
+			else
+			if (acm > 3.0) then acm=3.0; else
+				if (acm < 0 && acm > -0.45) then acm = -0.45;
+				 else
+				 if (v <= 0.5 && vcm == 0) then acm= -2.0; fi
+				fi
+			fi
+		fi
+  	    xA = select(distrib, size);
+		printf("AATC acm = %f \n", acm);
+	}
+
+            on transmitacmAndVcm
+                from Place5
+                to START provided(!(xA==0))  
+		do{ printf("AATC  %f data transmission \n",  ID);   	    xA = select(distrib, size);}
+
+            on transmitacmAndVcmFail
+                from Place5
+                to Place6 provided(xA==0)  
+
+end
+
+    
+    compound type Compound ()
+    
+        component Train train (1, 0)
+        component AATC aatc ()
+    
+        connector connector_type_Speed_And_Acc Connector1 (train.receiveVCMandACM, aatc.transmitacmAndVcm)
+        connector connector_type_Speed_And_Acc_Position Connector2 (train.sendPositionAccVelocity, aatc.receiveTrainPositionAndAccAndVelocity)
+    
+    end
+end
