@@ -326,7 +326,8 @@ atom type AATC ()
         port Port_Silent computeCommandedAccelerationFail()
 
         port Port_Silent transmitacmAndVcmFail()
-
+	
+        port Port_Silent reboot()
         
         place START, Place2, Place3, Place5, Place4, Place6
         initial to START 
@@ -447,6 +448,8 @@ atom type AATC ()
             on transmitacmAndVcmFail
                 from Place5
                 to Place6 provided(xA==0)  
+		
+	    on reboot from Place6 to START 	
 
 end
 
