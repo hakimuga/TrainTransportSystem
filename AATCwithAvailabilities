@@ -1,4 +1,349 @@
-xA==0)  
+
+
+@cpp(src="ext-cpp/utilities.cpp,ext-cpp/trace_helper.cpp,ext-cpp/proba_helper.cpp",include="utilities.hpp,trace_helper.hpp,proba_helper.hpp")
+
+package TrainTransportation
+
+
+    const data int FAULTY = 0
+    const data int NOFAULTY = 1
+
+
+    
+   extern data type distribution_t
+
+    extern function float nextSeg(float function_param_0)
+    
+    extern function float currentSegGrade(float function_param_0)
+    
+    extern function float currentSegSpeed(float function_param_0)
+    
+    extern function float nextStop(float function_param_0)
+    
+    extern function float wcsd()
+
+    extern function float appendText( float  function_param_0, float function_param_1, float function_param_2, float  function_param_3)
+
+
+    extern function printf(string function_param_0, int function_param_1, int function_param_2)
+
+    extern function printf(string function_param_0, int  function_param_1, float function_param_2)
+
+    extern function printf(string function_param_0, float  function_param_1)
+
+    extern function printf(string function_param_0, int  function_param_1)
+
+    extern function printf(string function_param_0)
+
+    extern function distribution_t init_distribution(string function_param_0, int function_param_1)
+    
+    extern function int select(distribution_t function_param_0, int function_param_1)
+
+
+    extern function int convert(float function_param_0)
+    
+    port type Port_Type_ACC_SPEED (float acc, float speed, int fault, int ID)
+    
+    port type Port_Silent ()
+    
+    port type Port_Type_Position_Acc_Speed (float acc, float speed, float position, int fault,  int ID)
+
+    
+    connector type connector_type_Speed_And_Acc (Port_Type_ACC_SPEED p1, Port_Type_ACC_SPEED p2)
+        data float varACC
+        data float varSpeed
+        define p2' p1' 
+        on p2  down {   p2.fault = FAULTY;   }
+
+        on p2 p1 provided (p1.ID==p2.ID) down {  
+		 p1.acc=p2.acc; p1.speed=p2.speed;  p2.fault = NOFAULTY;  p1.fault = NOFAULTY;   
+		 printf("DATA TRANSFERT FROM  %d  to %d\n",  p2.ID, p1.ID );
+	 }
+
+        on p1 down {   p1.fault = FAULTY;   }
+    end
+
+    
+    connector type connector_type_Speed_And_Acc_Position (Port_Type_Position_Acc_Speed p1, Port_Type_Position_Acc_Speed p2)
+        data float varAcc
+        data float varSpeed
+        data float varPosition
+       define p1' p2
+        on p1   down {   p1.fault = FAULTY;   }
+
+        on p1 p2 down {     p2.acc=p1.acc; p2.speed=p1.speed;  p2.position=p1.position ; p2.fault = NOFAULTY;  p1.fault = NOFAULTY;  p2.ID=p1.ID; }
+    end
+
+    
+    atom type Train (int vid, float currentPosition)
+        
+        
+        data float vcm
+        
+        data float acm
+        
+        data float v
+        
+        data float a
+        
+        data float position
+        
+        data int fault
+        
+        data float nose
+        
+        data float delta
+
+        data float elapsedtime
+        
+        data float gradeacc
+        
+        data float speed
+        
+        data float grade
+        
+        data float noseAtNext
+        
+        data int ID
+        
+        data int varint   
+        
+        export port Port_Type_ACC_SPEED receiveVCMandACM(acm, vcm, fault, ID)
+        
+        export port Port_Type_Position_Acc_Speed sendPositionAccVelocity(a, v, position, fault, ID)
+        
+        
+        port Port_Silent computePosition()
+        
+        port Port_Silent computeVelocity()
+        
+        port Port_Silent faultyReception()
+        
+        port Port_Silent computeAcceleration()
+        
+        
+        place START, Place2, Place3, Place4, Place5
+        initial to START
+            do {
+
+
+                delta = 0.5;
+                nose = 5;
+	    elapsedtime = 0;
+	    ID=vid;
+
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+            }
+            
+            on receiveVCMandACM
+                from START
+                to Place2 do{
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+		}
+            
+            on computePosition
+                from Place2
+                to Place3
+                provided (! (fault  ==  FAULTY))
+                do {
+		printf("TRAIN NO FAULTY RECEPTION = %f \n", fault);
+                        gradeacc = ((- 21.9  *  currentSegGrade(position))  /  100);
+                        if (((v  ==  0)  ||  (vcm  ==  0))) then
+                            position = position;
+                        
+                        else
+                            position = (((position  +  (v  *  delta))  +  (((0.5  *  a)  *  delta)  *  delta))  +  (((0.5  *  gradeacc)  *  delta)  *  delta));
+		    
+                        fi
+		
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+                }
+            
+            on computeVelocity
+                from Place3
+                to Place4
+                do {
+                        speed = ((v  +  (a  *  delta))  +  (gradeacc  *  delta));
+                        if (   ((v  ==  0)  && (vcm  ==  0))  ||  (speed  <=  0))  then
+                            v = 0;
+                        
+                        else
+                            v = speed;
+                        fi
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+                }
+            
+            
+            on faultyReception
+                from Place2
+                to Place5
+                provided ((fault  == FAULTY))
+	    do{
+		printf("TRAIN FAULTY RECEPTION = %f \n", fault);
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+		}
+            
+            on computeAcceleration
+                from Place4
+                to Place5
+                do {
+                        noseAtNext = (((position  +  (v  *  delta))  +  (((0.5  *  a)  *  delta)  *  delta))  +  (((0.5  *  gradeacc)  *  delta)  *  delta));
+                        grade = nextSeg(noseAtNext);
+
+                        if  (v==0 && vcm==0 ) then
+                            a = 0;
+                        
+                        else
+                                                    if   (  ( (v>vcm-2) && acm >0 ) ||  ( (v<vcm-2) && acm <0 ) ) then
+                            			a = (21.9*grade)/100;
+                        
+                        			else
+                            			a = acm;
+                       			    fi
+                        fi
+		printf("TRAIN ACCELERATION = %f \n", a);
+		elapsedtime =elapsedtime +delta;
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+		appendText(elapsedtime, position, a,v);
+                }
+            
+            on sendPositionAccVelocity
+                from Place5
+                to START do {
+
+		varint=  convert(elapsedtime);
+		printf("var int T%d.t %d\n", ID,varint);
+		varint=  convert(position) ;	
+		printf("var int T%d.p %d\n", ID, varint );
+		varint=  convert(v);
+		printf("var int T%d.v %d\n", ID,varint);
+		varint= convert(a);
+		printf("var int T%d.a %d\n", ID, varint);
+}
+    
+    
+    end
+
+atom type AATC ()
+        data int fault
+        
+        data float v
+        
+        data float p
+        
+        data float a
+        
+        data float vcm
+        
+        data float acm
+    
+        data float stopDistance
+        
+        data float safeStopDistance
+
+        data float vcmCivilSpeed
+
+        data float acmCivilAcceleration
+
+        data float acmNextStop
+
+        data float delta
+        
+        data float gradeacc
+        
+        data float range
+
+        data float acc
+
+        data int xA
+
+        data int ID
+
+        data int size
+
+        data distribution_t distrib
+        
+        export port Port_Type_Position_Acc_Speed receiveTrainPositionAndAccAndVelocity(a, v, p, fault, ID)
+        
+        export port Port_Type_ACC_SPEED transmitacmAndVcm(acm, vcm, fault, ID)
+        
+        port Port_Silent computeVCMCivilSpeed()
+        
+        port Port_Silent faultyReception()
+        
+        port Port_Silent computeCommandedSpeed()
+        
+        port Port_Silent computeCommandedAcceleration()
+
+        port Port_Silent receiveTrainPositionAndAccAndVelocityFail()
+
+        port Port_Silent computeVCMCivilSpeedFail()
+
+        port Port_Silent computeCommandedSpeedFail()
+
+        port Port_Silent computeCommandedAccelerationFail()
+
+        port Port_Silent transmitacmAndVcmFail()
+
+        
+        place START, Place2, Place3, Place5, Place4, Place6
+        initial to START 
+	do{
+                printf("AATC %d data inizialization\n",  ID);
+                delta = 0.5;	
+	    ID=0;
+	    distrib = init_distribution("proba.txt", size);
+  	    xA = select(distrib, size);
+	}
+            
+            on receiveTrainPositionAndAccAndVelocity
+                from START
+                to Place2 provided(xA==1)  do{ printf("AATC %d data reception \n",  ID);	    xA = select(distrib, size);}
+            on receiveTrainPositionAndAccAndVelocityFail
+                from START
+                to Place6 provided(xA==0)  
             
             on faultyReception
                 from Place2
